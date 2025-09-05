@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+  <title>Electronics Project — Temperature & Humidity Sensor</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Montserrat:wght@700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root{
+      --ink:#0f2742;            /* blu profondo testo */
+      --ink-2:#41566f;          /* secondario */
+      --accent:#b77a58;         /* rame / bronzo */
+      --line:#e7ecf3;           /* divider */
+      --brand:#1f5fff;          /* progress bar */
+      --bg:#f8fafc;             /* sfondo pagina */
+      --white:#fff;
+
+      /* Tipografia fluida */
+      --fs-hero: clamp(20px, 2.6vw, 40px);
+      --fs-sub: clamp(14px, 1.6vw, 18px);
+      --fs-body: clamp(14px, 1.2vw, 16px);
+      --fs-h2: clamp(18px, 1.8vw, 22px);
+
+      /* Raggi e paddings fluidi */
+      --radius: 14px;
+      --pad: clamp(12px, 2vw, 18px);
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--ink);
+      background:var(--bg);
+      line-height:1.6;
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
+      font-size: var(--fs-body);
+    }
+
+    /* NAVBAR (desktop) */
+    nav{
+      position:fixed; inset:0 0 auto 0;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 12px;
+      background:rgba(255,255,255,.92);
+      backdrop-filter:saturate(120%) blur(6px);
+      border-bottom:1px solid var(--line);
+      z-index:1000;
+      gap:10px;
+      min-height:60px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      font-family:'Montserrat',sans-serif;
+      font-weight:700; letter-spacing:.5px; color:var(--ink);
+      font-size:18px;
+      white-space:nowrap;
+    }
+    .brand i{width:22px;height:22px; stroke:var(--accent)}
+
+    .nav-right{display:flex; align-items:center; gap:10px}
+    .nav-links{
+      display:flex; gap:12px; list-style:none; flex-wrap:wrap;
+    }
+    .nav-links a{
+      color:var(--ink); text-decoration:none; font-weight:600; font-size:14px;
+      padding:8px 8px; border-radius:8px;
+    }
+    .nav-links a:hover{color:var(--accent); background:rgba(0,0,0,0.03)}
+
+    /* Pulsante note */
+    .edit-btn{
+      background:transparent;
+      border:1px solid #d9e1ee;
+      color:var(--ink);
+      padding:8px 12px;
+      border-radius:10px;
+      font-weight:600;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    .edit-btn[aria-pressed="true"]{
+      background:#fff;
+      border-color:var(--accent);
+      color:var(--accent);
+    }
+
+    /* QUICK NAV: pill bar (mobile) */
+    .quick-nav{display:none}
+    @media (max-width:860px){
+      .quick-nav{
+        position:sticky; top:60px; z-index:999; /* subito sotto la navbar */
+        display:flex; gap:8px; align-items:center;
+        overflow:auto;
+        padding:10px 12px;
+        background:rgba(255,255,255,.98);
+        border-bottom:1px solid var(--line);
+        /* fade ai lati */
+        -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+                mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+        scroll-snap-type:x proximity;
+      }
+      .quick-nav a{
+        scroll-snap-align:center;
+        flex:0 0 auto;
+        font-weight:700;
+        font-size:14px;
+        text-decoration:none;
+        color:var(--ink);
+        background:#fff;
+        border:1px solid var(--line);
+        border-radius:999px;
+        padding:10px 14px;
+        box-shadow:0 1px 0 rgba(0,0,0,.04);
+      }
+      .quick-nav a:active{transform:scale(.98)}
+      .quick-nav a[aria-current="true"],
+      .quick-nav a.active{
+        color:#fff;
+        background:var(--accent);
+        border-color:var(--accent);
+      }
+    }
+
+    /* PROGRESS */
+    #progress-bar{
+      position:fixed; top:60px; left:0; height:3px; width:0%;
+      background:var(--brand);
+      z-index:998;
+      transition:width .2s ease-out;
+    }
+    @media (max-width:860px){
+      #progress-bar{ top:104px; } /* nav 60 + quick-nav ~44 */
+    }
+
+    /* WRAPPER */
+    .page{
+      max-width:1100px;
+      margin:80px auto 64px;
+      padding:0 var(--pad);
+    }
+    @media (max-width:860px){
+      .page{ margin-top:100px; } /* spazio extra sotto quick-nav */
+    }
+
+    /* HERO */
+    .hero{
+      position:relative;
+      width:100%;
+      aspect-ratio:16/7;
+      max-height:520px;
+      background:var(--white);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      overflow:hidden;
+      display:block;
+      margin-top:10px;
+    }
+    @media (max-width:860px){
+      .hero{aspect-ratio:4/5; max-height:none}
+    }
+    .hero img{
+      width:100%; height:100%; object-fit:cover;
+      display:block;
+      transform:scale(1.01);
+    }
+    .hero-caption{
+      position:absolute; left:16px; bottom:16px;
+      background:rgba(255,255,255,.92);
+      border:1px solid var(--line);
+      padding:6px 10px; border-radius:10px;
+      font-size:14px; color:var(--ink-2); font-weight:600;
+    }
+
+    /* SECTION */
+    .section{padding:28px 4px; border-bottom:1px solid var(--line)}
+    .section:last-of-type{border-bottom:none}
+    .section h2{
+      display:flex; align-items:center; gap:10px;
+      font-family:'Montserrat',sans-serif;
+      font-size:var(--fs-h2); color:var(--ink);
+      margin-bottom:12px;
+    }
+    .section h2 i{width:26px;height:26px; stroke:var(--accent)}
+    .lead{color:var(--ink-2); font-size:var(--fs-body); max-width:80ch}
+
+    /* SLIDER (colonna) */
+    .catalog{
+      position:relative;
+      background:var(--white);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      overflow:hidden;
+      padding:var(--pad);
+    }
+    .catalog-inner{
+      display:grid; grid-template-columns:1fr; gap:12px;
+      align-items:start;
+    }
+    .item-image{
+      width:100%; aspect-ratio:4/3;
+      background:#f3f6fb;
+      border:1px solid var(--line); border-radius:12px;
+      overflow:hidden;
+    }
+    .item-image img{width:100%; height:100%; object-fit:contain; background:#fff}
+    .item-text{padding:2px 4px}
+    .item-text h3{font-size:clamp(16px, 1.6vw, 20px); margin-bottom:6px; color:var(--ink)}
+    .item-text p{color:var(--ink-2)}
+
+    .controls{
+      display:flex; align-items:center; justify-content:center; gap:12px;
+      margin-top:8px; flex-wrap:wrap;
+    }
+    .arrow{
+      width:44px; height:44px; border-radius:50%;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg,#fff,#f5f7fb);
+      box-shadow:0 2px 6px rgba(0,0,0,.04);
+      display:grid; place-items:center;
+      cursor:pointer;
+      transition:transform .12s ease;
+      touch-action:manipulation;
+    }
+    .arrow:active{transform:scale(.98)}
+    .arrow i{width:22px;height:22px; stroke:var(--ink)}
+    .dots{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:center}
+    .dot{width:9px; height:9px; border-radius:50%; background:#cfd8e6; transition:transform .2s, background .2s}
+    .dot.active{background:var(--accent); transform:scale(1.15)}
+
+    /* NOTE */
+    .notes{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      padding:var(--pad);
+      color:var(--ink-2);
+      position:relative;
+    }
+    .notes h3{font-size:clamp(16px, 1.6vw, 18px); margin-bottom:8px; color:var(--ink)}
+    .notes p{margin-bottom:10px}
+    .notes ul{margin-left:18px;margin-bottom:8px}
+    .notes.editing{outline:1px dashed var(--accent)}
+    .notes.editing::after{
+      content:"✏️ Modalità modifica attiva";
+      position:absolute; top:-26px; right:10px;
+      background:var(--accent); color:#fff; font-size:12px;
+      padding:2px 6px; border-radius:6px;
+    }
+
+    /* Footer */
+    footer{margin-top:40px; color:var(--ink-2); font-size:14px; text-align:center}
+  </style>
+</head>
+<body>
+  <!-- NAVBAR (desktop) -->
+  <nav>
+    <div class="brand"><i data-lucide="cpu"></i> Electronics Project</div>
+    <div class="nav-right">
+      <ul class="nav-links">
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#description">Description</a></li>
+        <li><a href="#components">Components</a></li>
+        <li><a href="#circuit">Circuit</a></li>
+        <li><a href="#circuit-notes">Circuit Notes</a></li>
+        <li><a href="#data">Data</a></li>
+        <li><a href="#data-notes">Data Observations</a></li>
+        <li><a href="#screens">Screens</a></li>
+        <li><a href="#screens-notes">Screens Notes</a></li>
+        <li><a href="#how">How it Works</a></li>
+        <li><a href="#contacts">Contacts</a></li>
+      </ul>
+      <button id="editToggle" class="edit-btn" aria-pressed="false" title="Clicca per modificare i box di testo">Modifica note</button>
+    </div>
+  </nav>
+
+  <!-- QUICK NAV (mobile only) -->
+  <div class="quick-nav" id="quickNav">
+    <a href="#overview">Overview</a>
+    <a href="#description">Description</a>
+    <a href="#components">Components</a>
+    <a href="#circuit">Circuit</a>
+    <a href="#data">Data</a>
+    <a href="#screens">Screens</a>
+    <a href="#how">How it Works</a>
+    <a href="#contacts">Contacts</a>
+  </div>
+
+  <!-- Progress bar -->
+  <div id="progress-bar"></div>
+
+  <main class="page" id="pageTop">
+    <!-- HERO -->
+    <a id="overview" class="hero reveal" href="#">
+      <img src="/images/hero.jpg" alt="Project overview image" />
+      <span class="hero-caption">General overview</span>
+    </a>
+
+    <!-- DESCRIPTION -->
+    <section id="description" class="section reveal">
+      <h2><i data-lucide="info"></i> Project Description</h2>
+      <p class="lead">
+        We remotely monitor classroom humidity and temperature to support the theme
+        <em>“Health and Wellbeing at School”.</em> The IoT device tracks environmental data in real time and
+        helps optimize comfort and learning conditions.
+      </p>
+    </section>
+
+    <!-- COMPONENTS slider -->
+    <section id="components" class="section reveal">
+      <h2><i data-lucide="package"></i> Components</h2>
+      <div class="catalog" id="comp-slider"></div>
+    </section>
+
+    <!-- CIRCUIT slider -->
+    <section id="circuit" class="section reveal">
+      <h2><i data-lucide="circuit-board"></i> Circuit</h2>
+      <div class="catalog" id="circuit-slider"></div>
+    </section>
+
+    <!-- CIRCUIT NOTES -->
+    <section id="circuit-notes" class="section reveal">
+      <h2><i data-lucide="notebook-pen"></i> Circuit Notes</h2>
+      <div class="notes">
+        <h3>Assembly & Safety</h3>
+        <p>Write here any notes about wiring, PCB layout, isolation, CT clamp placement, etc.</p>
+        <h3>Calibration Tips</h3>
+        <ul>
+          <li>Offset/scale for CT sensor</li>
+          <li>Shielding / noise reduction</li>
+          <li>Recommended load profiles</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- DATA slider -->
+    <section id="data" class="section reveal">
+      <h2><i data-lucide="bar-chart-3"></i> Analyzed Data</h2>
+      <div class="catalog" id="data-slider"></div>
+    </section>
+
+    <!-- DATA NOTES -->
+    <section id="data-notes" class="section reveal">
+      <h2><i data-lucide="file-text"></i> Data Observations</h2>
+      <div class="notes">
+        <h3>Key Findings</h3>
+        <p>Add here longer observations: patterns over time, peak hours, correlations between humidity and consumption, etc.</p>
+        <h3>Methodology</h3>
+        <p>Sampling rate, smoothing, outlier handling, and any assumptions.</p>
+      </div>
+    </section>
+
+    <!-- SCREENS slider -->
+    <section id="screens" class="section reveal">
+      <h2><i data-lucide="smartphone"></i> App Screens</h2>
+      <div class="catalog" id="screens-slider"></div>
+    </section>
+
+    <!-- SCREENS NOTES -->
+    <section id="screens-notes" class="section reveal">
+      <h2><i data-lucide="sticky-note"></i> Screens Notes</h2>
+      <div class="notes">
+        <h3>UI/UX</h3>
+        <p>Explain how the app displays live readings, trends, alerts, and any navigation details.</p>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section id="how" class="section reveal">
+      <h2><i data-lucide="zap"></i> How It Works</h2>
+      <p class="lead">
+        The sensor is calibrated via a smart plug with different loads (phone, PC, charger, etc.). Then the
+        system is installed in the school electrical panels to monitor energy usage via IoT. Data is stored in Firebase.
+      </p>
+    </section>
+
+    <!-- CONTACTS -->
+    <section id="contacts" class="section reveal">
+      <h2><i data-lucide="users"></i> Contacts</h2>
+      <p class="lead">
+        <strong>Created by:</strong> Matteo Emanuele Di Giacomo &amp; Francesco Lombardi — <strong>Supervisor:</strong> Prof. Roberto Versari<br/>
+        <strong>School/Course:</strong> ITIS Electronics — 5AEn
+      </p>
+    </section>
+
+    <footer>&copy; 2025 — School Electronics Project</footer>
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    /* ----- Quick-nav: smooth scroll + attivo ----- */
+    const qnav = document.getElementById('quickNav');
+    const qlinks = qnav ? Array.from(qnav.querySelectorAll('a')) : [];
+
+    // smooth scroll con offset (navbar + quicknav)
+    function smoothTo(id){
+      const el = document.querySelector(id);
+      if(!el) return;
+      // offset: 120px su mobile (nav + quick), 80px su desktop
+      const offset = window.matchMedia('(max-width: 860px)').matches ? 120 : 80;
+      const y = el.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+    qlinks.forEach(a=>{
+      a.addEventListener('click', (e)=>{
+        const id = a.getAttribute('href');
+        if(id && id.startsWith('#')){
+          e.preventDefault();
+          smoothTo(id);
+        }
+      });
+    });
+
+    // evidenziazione sezione attiva
+    const sectionsToWatch = [
+      '#overview','#description','#components','#circuit',
+      '#data','#screens','#how','#contacts'
+    ].map(s=>document.querySelector(s)).filter(Boolean);
+
+    const setActive = (id)=>{
+      qlinks.forEach(a=>{
+        const on = a.getAttribute('href') === id;
+        a.toggleAttribute('aria-current', on);
+        a.classList.toggle('active', on);
+      });
+    };
+    const activeIO = new IntersectionObserver((entries)=>{
+      const visible = entries
+        .filter(e=>e.isIntersecting)
+        .sort((a,b)=>b.intersectionRatio - a.intersectionRatio)[0];
+      if(visible){ setActive('#'+visible.target.id); }
+    }, { rootMargin: '-20% 0px -60% 0px', threshold: [0.2, 0.35, 0.6] });
+    sectionsToWatch.forEach(sec=>activeIO.observe(sec));
+
+    /* ----- Progress bar ----- */
+    const progressBar = document.getElementById('progress-bar');
+    window.addEventListener('scroll', () => {
+      const max = document.body.scrollHeight - window.innerHeight;
+      const p = (window.scrollY / max) * 100;
+      progressBar.style.width = p + '%';
+    });
+
+    /* ----- Reveal ALWAYS ----- */
+    const observed = document.querySelectorAll('.reveal');
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if(e.isIntersecting){ e.target.classList.add('in-view'); }
+        else{ e.target.classList.remove('in-view'); }
+      });
+    }, {threshold: 0.12});
+    observed.forEach(el=>io.observe(el));
+
+    /* ----- Slider builder (autoplay + touch) ----- */
+    function makeSlider(elId, items){
+      const wrap = document.getElementById(elId);
+      wrap.innerHTML = `
+        <div class="catalog-inner">
+          <div class="item-image"><img id="${elId}-img" src="" alt=""/></div>
+          <div class="item-text"><h3 id="${elId}-title"></h3><p id="${elId}-desc"></p></div>
+        </div>
+        <div class="controls">
+          <button class="arrow" id="${elId}-prev" aria-label="Previous"><i data-lucide="chevron-left"></i></button>
+          <div class="dots" id="${elId}-dots"></div>
+          <button class="arrow" id="${elId}-next" aria-label="Next"><i data-lucide="chevron-right"></i></button>
+        </div>`;
+      lucide.createIcons();
+
+      const imgEl   = document.getElementById(`${elId}-img`);
+      const titleEl = document.getElementById(`${elId}-title`);
+      const descEl  = document.getElementById(`${elId}-desc`);
+      const dotsEl  = document.getElementById(`${elId}-dots`);
+      const prevBtn = document.getElementById(`${elId}-prev`);
+      const nextBtn = document.getElementById(`${elId}-next`);
+      let index = 0, timer = null;
+
+      function renderDots(){
+        dotsEl.innerHTML = '';
+        items.forEach((_,i)=>{
+          const d = document.createElement('span');
+          d.className = 'dot'+(i===index?' active':'');
+          d.addEventListener('click',()=>goTo(i));
+          dotsEl.appendChild(d);
+        });
+      }
+      function fadeSwap(cb){
+        imgEl.style.opacity = 0; titleEl.style.opacity = 0; descEl.style.opacity = 0;
+        setTimeout(()=>{ cb(); imgEl.style.opacity = 1; titleEl.style.opacity = 1; descEl.style.opacity = 1; }, 120);
+      }
+      function update(){
+        fadeSwap(()=>{
+          imgEl.src   = items[index].img;
+          imgEl.alt   = items[index].title || 'slide image';
+          titleEl.textContent = items[index].title || '';
+          descEl.textContent  = items[index].desc || '';
+          renderDots();
+        });
+      }
+      function goTo(i){ index = (i+items.length)%items.length; update(); }
+
+      function startAuto(){ stopAuto(); timer = setInterval(()=>goTo(index+1), 3500); }
+      function stopAuto(){ if(timer){ clearInterval(timer); timer=null; } }
+
+      prevBtn.addEventListener('click', ()=>goTo(index-1));
+      nextBtn.addEventListener('click', ()=>goTo(index+1));
+
+      // swipe touch su tutta la card
+      let x0=null;
+      wrap.addEventListener('touchstart', e=>x0=e.touches[0].clientX,{passive:true});
+      wrap.addEventListener('touchend', e=>{
+        if(x0===null) return;
+        const dx = e.changedTouches[0].clientX - x0;
+        if(Math.abs(dx)>40){ dx>0 ? goTo(index-1) : goTo(index+1); }
+        x0=null;
+      });
+
+      // Pausa on hover/focus
+      wrap.addEventListener('mouseenter', stopAuto);
+      wrap.addEventListener('mouseleave', startAuto);
+      wrap.addEventListener('focusin', stopAuto);
+      wrap.addEventListener('focusout', startAuto);
+
+      update();
+      startAuto();
+    }
+
+    /* ----- Datasets esempio (sostituisci i path) ----- */
+    const compItems=[
+      {title:'Arduino Uno',desc:'Main microcontroller board.',img:'/images/arduino.jpg'},
+      {title:'DHT11 Sensor',desc:'Temperature and humidity sensor.',img:'/images/dht11.jpg'},
+      {title:'SCT-013-030',desc:'Current sensor for AC.',img:'/images/sct.jpg'},
+      {title:'16x2 LCD',desc:'Display for data output.',img:'/images/lcd.jpg'},
+    ];
+    const circuitItems=[
+      {title:'Circuit Photo 1',desc:'Description of circuit 1.',img:'/images/circuit1.jpg'},
+      {title:'Circuit Photo 2',desc:'Description of circuit 2.',img:'/images/circuit2.jpg'},
+      {title:'Circuit Photo 3',desc:'Description of circuit 3.',img:'/images/circuit3.jpg'},
+      {title:'Circuit Photo 4',desc:'Description of circuit 4.',img:'/images/circuit4.jpg'},
+    ];
+    const dataItems=[
+      {title:'Data Graph 1',desc:'Observation about graph 1.',img:'/images/data1.jpg'},
+      {title:'Data Graph 2',desc:'Observation about graph 2.',img:'/images/data2.jpg'},
+      {title:'Data Graph 3',desc:'Observation about graph 3.',img:'/images/data3.jpg'},
+      {title:'Data Graph 4',desc:'Observation about graph 4.',img:'/images/data4.jpg'},
+    ];
+    const screensItems=[
+      {title:'App Screen 1',desc:'',img:'/images/screen1.jpg'},
+      {title:'App Screen 2',desc:'',img:'/images/screen2.jpg'},
+      {title:'App Screen 3',desc:'',img:'/images/screen3.jpg'},
+    ];
+
+    /* ----- Init sliders ----- */
+    makeSlider('comp-slider',compItems);
+    makeSlider('circuit-slider',circuitItems);
+    makeSlider('data-slider',dataItems);
+    makeSlider('screens-slider',screensItems);
+
+    /* ----- EDIT MODE note con salvataggio locale ----- */
+    const editBtn = document.getElementById('editToggle');
+    const allNotes = Array.from(document.querySelectorAll('.notes')).map((el, i) => {
+      if (!el.id) el.id = 'notes-' + i;
+      return el;
+    });
+    // Ripristina salvataggi
+    allNotes.forEach(el => {
+      const saved = localStorage.getItem('notes:' + el.id);
+      if (saved) el.innerHTML = saved;
+    });
+    function setEditing(on){
+      editBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      editBtn.textContent = on ? 'Salva note' : 'Modifica note';
+      editBtn.title = on
+        ? 'Clicca per salvare ed uscire dalla modalità modifica'
+        : 'Clicca per modificare i box di testo';
+      allNotes.forEach(el => {
+        el.contentEditable = on ? 'true' : 'false';
+        el.classList.toggle('editing', on);
+      });
+      if(on){ allNotes.forEach(el => el.addEventListener('input', saveHandler)); }
+      else{
+        allNotes.forEach(el => el.removeEventListener('input', saveHandler));
+        allNotes.forEach(saveEl => localStorage.setItem('notes:' + saveEl.id, saveEl.innerHTML));
+      }
+    }
+    function saveHandler(e){
+      const el = e.currentTarget;
+      localStorage.setItem('notes:' + el.id, el.innerHTML);
+    }
+    editBtn.addEventListener('click', () => {
+      const isOn = editBtn.getAttribute('aria-pressed') === 'true';
+      setEditing(!isOn);
+    });
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape' && editBtn.getAttribute('aria-pressed') === 'true'){
+        setEditing(false);
+      }
+    });
+  </script>
+</body>
+</html>
